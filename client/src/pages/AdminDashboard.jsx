@@ -282,7 +282,7 @@ const AdminDashboard = () => {
               </div>
 
               <Link
-                to="api/admin/users"
+                to="/admin/users"
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 View all
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
               </div>
 
               <Link
-                to="api/admin/projects"
+                to="/admin/projects"
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 View all
@@ -406,7 +406,7 @@ const AdminDashboard = () => {
               </div>
 
               <Link
-                to="api/admin/tasks"
+                to="/admin/tasks"
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 View all

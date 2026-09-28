@@ -15,7 +15,7 @@ const AdminUsers = () => {
       setLoading(true);
       setError(null);
 
-      const response = await api.get("/admin/users");
+      const response = await api.get("api/admin/users");
 
       setUsers(response.data.users || []);
     } catch (error) {

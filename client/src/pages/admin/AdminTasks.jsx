@@ -15,7 +15,7 @@ const AdminTasks = () => {
       setLoading(true);
       setError(null);
 
-      const response = await api.get("/admin/tasks");
+      const response = await api.get("api/admin/tasks");
 
       setTasks(response.data.tasks || []);
     } catch (error) {

@@ -19,7 +19,7 @@ const AdminProjects = () => {
       setLoading(true);
       setError(null);
 
-      const response = await api.get("/admin/projects");
+      const response = await api.get("api/admin/projects");
 
       setProjects(response.data.projects || []);
     } catch (error) {
