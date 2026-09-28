@@ -35,7 +35,7 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post("api/auth/logout");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
@@ -60,10 +60,10 @@ const AdminDashboard = () => {
 
       const [statsResponse, usersResponse, projectsResponse, tasksResponse] =
         await Promise.all([
-          api.get("/admin/stats"),
-          api.get("/admin/users"),
-          api.get("/admin/projects"),
-          api.get("/admin/tasks"),
+          api.get("api/admin/stats"),
+          api.get("api/admin/users"),
+          api.get("api/admin/projects"),
+          api.get("api/admin/tasks"),
         ]);
 
       setStats({
