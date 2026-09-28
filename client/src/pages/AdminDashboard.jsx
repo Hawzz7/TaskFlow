@@ -281,13 +281,13 @@ const AdminDashboard = () => {
                 </p>
               </div>
 
-              <a
-                href="/admin/users"
+              <Link
+                to="api/admin/users"
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 View all
                 <ArrowRight size={15} />
-              </a>
+              </Link>
             </div>
 
             <div className="divide-y divide-slate-100">
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
               </div>
 
               <Link
-                to="/admin/projects"
+                to="api/admin/projects"
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 View all
@@ -406,7 +406,7 @@ const AdminDashboard = () => {
               </div>
 
               <Link
-                to="/admin/tasks"
+                to="api/admin/tasks"
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 View all
