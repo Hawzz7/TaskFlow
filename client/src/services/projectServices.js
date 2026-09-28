@@ -1,7 +1,7 @@
 import api from "./api";
 
 export const getProjects = async (page = 1, limit = 6) => {
-  const response = await api.get("/projects", {
+  const response = await api.get("api/projects", {
     params: {
       page,
       limit,
