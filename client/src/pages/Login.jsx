@@ -49,7 +49,7 @@ const Login = () => {
       dispatch(setLoading(true));
       dispatch(setAuthError(null));
 
-      const response = await api.post("/auth/login", data);
+      const response = await api.post("api/auth/login", data);
 
       const loggedInUser = response.data.user;
 
