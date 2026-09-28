@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboardTasks, setDashboardTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [totalProjectsCount, setTotalProjectsCount] = useState(0);
 
   const fetchProjects = async () => {
     dispatch(setProjectLoading(true));
@@ -44,6 +45,7 @@ const Dashboard = () => {
       const data = await getProjects();
 
       dispatch(setProjects(data.projects || []));
+      setTotalProjectsCount(data.pagination?.totalProjects || 0);
     } catch (error) {
       console.error("Failed to fetch dashboard projects:", error);
 
@@ -115,7 +117,7 @@ const Dashboard = () => {
     },
   ];
 
-  // Project statistics
+  // task statistics
   const totalTasks = dashboardTasks.length;
 
   const pendingTasks = dashboardTasks.filter(
@@ -126,8 +128,8 @@ const Dashboard = () => {
     (task) => task.status === "COMPLETED",
   ).length;
 
-  // Task statistics
-  const totalProjects = projects.length;
+  // project statistics
+  const totalProjects = totalProjectsCount;
 
   const inProgressProjects = projects.filter(
     (project) => project.status === "IN_PROGRESS",
