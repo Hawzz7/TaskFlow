@@ -386,7 +386,7 @@ export const getDashboardTasks = async (req, res) => {
 
     const projectIds = projects.map((project) => project._id);
 
-    // Find tasks belonging to those projects
+    // Find all tasks belonging to those projects
     const tasks = await Task.find({
       project: { $in: projectIds },
     })
@@ -395,10 +395,50 @@ export const getDashboardTasks = async (req, res) => {
       .populate("createdBy", "name email role")
       .sort({ createdAt: -1 });
 
+    // Current date
+    const now = new Date();
+
+    // Dynamically calculate overdue tasks
+    const overdueTasks = tasks.filter(
+      (task) =>
+        task.dueDate &&
+        new Date(task.dueDate) < now &&
+        task.status !== "COMPLETED",
+    );
+
+    // High-priority tasks that are not completed
+    const highPriorityTasks = tasks.filter(
+      (task) =>
+        task.priority === "HIGH" &&
+        task.status !== "COMPLETED",
+    );
+
     return res.status(200).json({
       success: true,
+
       count: tasks.length,
+
       tasks,
+
+      statistics: {
+        totalTasks: tasks.length,
+
+        pendingTasks: tasks.filter(
+          (task) => task.status !== "COMPLETED",
+        ).length,
+
+        completedTasks: tasks.filter(
+          (task) => task.status === "COMPLETED",
+        ).length,
+
+        overdueTasks: overdueTasks.length,
+
+        highPriorityTasks: highPriorityTasks.length,
+      },
+
+      overdueTasks,
+
+      highPriorityTasks,
     });
   } catch (error) {
     console.error("Get dashboard tasks error:", error);
@@ -409,3 +449,37 @@ export const getDashboardTasks = async (req, res) => {
     });
   }
 };
+
+// export const getDashboardTasks = async (req, res) => {
+//   try {
+//     // Find all projects where the logged-in user is a member
+//     const projects = await Project.find({
+//       members: req.user._id,
+//     }).select("_id");
+
+//     const projectIds = projects.map((project) => project._id);
+
+//     // Find tasks belonging to those projects
+//     const tasks = await Task.find({
+//       project: { $in: projectIds },
+//     })
+//       .populate("project", "name status priority")
+//       .populate("assignee", "name email role")
+//       .populate("createdBy", "name email role")
+//       .sort({ createdAt: -1 });
+
+//     return res.status(200).json({
+//       success: true,
+//       count: tasks.length,
+//       tasks,
+//     });
+//   } catch (error) {
+//     console.error("Get dashboard tasks error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Unable to fetch dashboard tasks",
+//     });
+//   }
+// };
+

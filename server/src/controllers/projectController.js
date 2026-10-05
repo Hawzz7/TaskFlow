@@ -1,5 +1,6 @@
 import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
+import Task from "../models/Task.model.js"
 
 export const createProject = async (req, res) => {
   try {
@@ -56,11 +57,76 @@ export const getProjects = async (req, res) => {
       Project.countDocuments(projectFilter),
     ]);
 
+    // Calculate task progress for the projects
+    // displayed on the current page.
+    const projectIds = projects.map((project) => project._id);
+
+    const taskStats = await Task.aggregate([
+      {
+        $match: {
+          project: { $in: projectIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$project",
+
+          totalTasks: {
+            $sum: 1,
+          },
+
+          completedTasks: {
+            $sum: {
+              $cond: [
+                { $eq: ["$status", "COMPLETED"] },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    // Convert task statistics into a Map
+    // so we can quickly attach them to each project.
+    const taskStatsMap = new Map(
+      taskStats.map((stat) => [
+        stat._id.toString(),
+        {
+          totalTasks: stat.totalTasks,
+          completedTasks: stat.completedTasks,
+          progress:
+            stat.totalTasks === 0
+              ? 0
+              : Math.round(
+                  (stat.completedTasks / stat.totalTasks) * 100,
+                ),
+        },
+      ]),
+    );
+
+    // Add task statistics to every project.
+    const projectsWithProgress = projects.map((project) => {
+      const stats = taskStatsMap.get(project._id.toString()) || {
+        totalTasks: 0,
+        completedTasks: 0,
+        progress: 0,
+      };
+
+      return {
+        ...project.toObject(),
+        taskStats: stats,
+      };
+    });
+
     const totalPages = Math.ceil(totalProjects / limit);
 
     return res.status(200).json({
       success: true,
-      projects,
+
+      projects: projectsWithProgress,
+
       pagination: {
         currentPage: page,
         limit,
@@ -76,6 +142,90 @@ export const getProjects = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to fetch projects",
+    });
+  }
+};
+// export const getProjects = async (req, res) => {
+//   try {
+//     const page = Math.max(Number(req.query.page) || 1, 1);
+//     const limit = Math.min(Math.max(Number(req.query.limit) || 6, 1), 50);
+
+//     const skip = (page - 1) * limit;
+
+//     const projectFilter = {
+//       $or: [{ owner: req.user._id }, { members: req.user._id }],
+//     };
+
+//     const [projects, totalProjects] = await Promise.all([
+//       Project.find(projectFilter)
+//         .populate("owner", "name email role")
+//         .populate("members", "name email role")
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(limit),
+
+//       Project.countDocuments(projectFilter),
+//     ]);
+
+//     const totalPages = Math.ceil(totalProjects / limit);
+
+//     return res.status(200).json({
+//       success: true,
+//       projects,
+//       pagination: {
+//         currentPage: page,
+//         limit,
+//         totalProjects,
+//         totalPages,
+//         hasNextPage: page < totalPages,
+//         hasPreviousPage: page > 1,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Get projects error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Unable to fetch projects",
+//     });
+//   }
+// };
+
+export const getProjectStatistics = async (req, res) => {
+  try {
+    const projectFilter = {
+      $or: [{ owner: req.user._id }, { members: req.user._id }],
+    };
+
+    const [totalProjects, inProgressProjects, completedProjects] =
+      await Promise.all([
+        Project.countDocuments(projectFilter),
+
+        Project.countDocuments({
+          ...projectFilter,
+          status: "IN_PROGRESS",
+        }),
+
+        Project.countDocuments({
+          ...projectFilter,
+          status: "COMPLETED",
+        }),
+      ]);
+
+    return res.status(200).json({
+      success: true,
+      statistics: {
+        totalProjects,
+        inProgressProjects,
+        completedProjects,
+      },
+    });
+  } catch (error) {
+    console.error("Get project statistics error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch project statistics",
     });
   }
 };
@@ -285,8 +435,7 @@ export const removeProjectMember = async (req, res) => {
     }
 
     const isMember = project.members.some(
-      (existingMemberId) =>
-        existingMemberId.toString() === memberId.toString(),
+      (existingMemberId) => existingMemberId.toString() === memberId.toString(),
     );
 
     if (!isMember) {
@@ -297,8 +446,7 @@ export const removeProjectMember = async (req, res) => {
     }
 
     project.members = project.members.filter(
-      (existingMemberId) =>
-        existingMemberId.toString() !== memberId.toString(),
+      (existingMemberId) => existingMemberId.toString() !== memberId.toString(),
     );
 
     await project.save();

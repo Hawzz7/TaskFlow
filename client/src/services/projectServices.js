@@ -11,6 +11,12 @@ export const getProjects = async (page = 1, limit = 6) => {
   return response.data;
 };
 
+export const getProjectStatistics = async () => {
+  const response = await api.get("projects/statistics");
+
+  return response.data;
+};
+
 export const createProject = async (projectData) => {
   const response = await api.post("projects", projectData);
 

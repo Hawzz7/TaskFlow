@@ -16,7 +16,7 @@ import {
 
 import { clearUser } from "../redux/slices/authSlice";
 import { logoutUser } from "../services/authServices";
-import { getProjects } from "../services/projectServices";
+import { getProjects, getProjectStatistics } from "../services/projectServices";
 import { getDashboardTasks } from "../services/taskServices";
 import {
   setProjects,
@@ -35,7 +35,18 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboardTasks, setDashboardTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
-  const [totalProjectsCount, setTotalProjectsCount] = useState(0);
+  const [projectStatistics, setProjectStatistics] = useState({
+    totalProjects: 0,
+    inProgressProjects: 0,
+    completedProjects: 0,
+  });
+  const [taskStatistics, setTaskStatistics] = useState({
+    totalTasks: 0,
+    pendingTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
+    highPriorityTasks: 0,
+  });
 
   const fetchProjects = async () => {
     dispatch(setProjectLoading(true));
@@ -43,9 +54,9 @@ const Dashboard = () => {
 
     try {
       const data = await getProjects();
+      console.log("Projects: ", data);
 
       dispatch(setProjects(data.projects || []));
-      setTotalProjectsCount(data.pagination?.totalProjects || 0);
     } catch (error) {
       console.error("Failed to fetch dashboard projects:", error);
 
@@ -59,6 +70,26 @@ const Dashboard = () => {
     }
   };
 
+  const fetchProjectStatistics = async () => {
+    try {
+      const data = await getProjectStatistics();
+
+      setProjectStatistics({
+        totalProjects: data.statistics?.totalProjects || 0,
+        inProgressProjects: data.statistics?.inProgressProjects || 0,
+        completedProjects: data.statistics?.completedProjects || 0,
+      });
+    } catch (error) {
+      console.error("Failed to fetch project statistics:", error);
+
+      setProjectStatistics({
+        totalProjects: 0,
+        inProgressProjects: 0,
+        completedProjects: 0,
+      });
+    }
+  };
+
   const fetchDashboardTasks = async () => {
     try {
       setTasksLoading(true);
@@ -66,10 +97,26 @@ const Dashboard = () => {
       const data = await getDashboardTasks();
 
       setDashboardTasks(data.tasks || []);
+
+      setTaskStatistics({
+        totalTasks: data.statistics?.totalTasks || 0,
+        pendingTasks: data.statistics?.pendingTasks || 0,
+        completedTasks: data.statistics?.completedTasks || 0,
+        overdueTasks: data.statistics?.overdueTasks || 0,
+        highPriorityTasks: data.statistics?.highPriorityTasks || 0,
+      });
     } catch (error) {
       console.error("Failed to fetch dashboard tasks:", error);
 
       setDashboardTasks([]);
+
+      setTaskStatistics({
+        totalTasks: 0,
+        pendingTasks: 0,
+        completedTasks: 0,
+        overdueTasks: 0,
+        highPriorityTasks: 0,
+      });
     } finally {
       setTasksLoading(false);
     }
@@ -77,6 +124,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchProjects();
+    fetchProjectStatistics();
     fetchDashboardTasks();
   }, []);
 
@@ -118,26 +166,17 @@ const Dashboard = () => {
   ];
 
   // task statistics
-  const totalTasks = dashboardTasks.length;
-
-  const pendingTasks = dashboardTasks.filter(
-    (task) => task.status === "TODO",
-  ).length;
-
-  const completedTasks = dashboardTasks.filter(
-    (task) => task.status === "COMPLETED",
-  ).length;
+  const totalTasks = taskStatistics.totalTasks;
+  const pendingTasks = taskStatistics.pendingTasks;
+  const completedTasks = taskStatistics.completedTasks;
+  const overdueTasks = taskStatistics.overdueTasks;
+  const highPriorityTasks = taskStatistics.highPriorityTasks;
 
   // project statistics
-  const totalProjects = totalProjectsCount;
-
-  const inProgressProjects = projects.filter(
-    (project) => project.status === "IN_PROGRESS",
-  ).length;
-
-  const completedProjects = projects.filter(
-    (project) => project.status === "COMPLETED",
-  ).length;
+  // project statistics
+  const totalProjects = projectStatistics.totalProjects;
+  const inProgressProjects = projectStatistics.inProgressProjects;
+  const completedProjects = projectStatistics.completedProjects;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -403,6 +442,50 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <CheckSquare size={21} />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Overdue Tasks */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-500">Overdue Tasks</p>
+
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    {tasksLoading ? "..." : overdueTasks}
+                  </p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                  <CheckSquare size={21} />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* High Priority Tasks */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-500">High-Priority Tasks</p>
+
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    {tasksLoading ? "..." : highPriorityTasks}
+                  </p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
                   <CheckSquare size={21} />
                 </div>
               </div>

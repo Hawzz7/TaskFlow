@@ -353,6 +353,35 @@ const Projects = () => {
                     </span>
                   </div>
 
+                  {/* Project Progress */}
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-600">
+                        Project Progress
+                      </span>
+
+                      <span className="text-sm font-semibold text-slate-800">
+                        {project.taskStats?.progress ?? 0}%
+                      </span>
+                    </div>
+
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{
+                          width: `${project.taskStats?.progress ?? 0}%`,
+                        }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className="h-full rounded-full bg-indigo-600"
+                      />
+                    </div>
+
+                    <div className="mt-2 text-xs text-slate-500">
+                      {project.taskStats?.completedTasks ?? 0} of{" "}
+                      {project.taskStats?.totalTasks ?? 0} tasks completed
+                    </div>
+                  </div>
+
                   {/* Dates */}
                   <div
                     className={
