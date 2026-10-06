@@ -41,6 +41,8 @@ app.use("/api/projects", projectRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/notifications", notificationRouter);
 
+console.log("NOTIFICATION ROUTER REGISTERED");
+
 // Admin routes
 app.use("/api/admin", adminRoutes);
 
