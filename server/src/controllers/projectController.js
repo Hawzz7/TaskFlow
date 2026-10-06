@@ -1,6 +1,7 @@
 import Project from "../models/Project.model.js";
 import User from "../models/User.model.js";
-import Task from "../models/Task.model.js"
+import Task from "../models/Task.model.js";
+import Notification from "../models/Notification.model.js";
 
 export const createProject = async (req, res) => {
   try {
@@ -77,11 +78,7 @@ export const getProjects = async (req, res) => {
 
           completedTasks: {
             $sum: {
-              $cond: [
-                { $eq: ["$status", "COMPLETED"] },
-                1,
-                0,
-              ],
+              $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0],
             },
           },
         },
@@ -99,9 +96,7 @@ export const getProjects = async (req, res) => {
           progress:
             stat.totalTasks === 0
               ? 0
-              : Math.round(
-                  (stat.completedTasks / stat.totalTasks) * 100,
-                ),
+              : Math.round((stat.completedTasks / stat.totalTasks) * 100),
         },
       ]),
     );
@@ -378,6 +373,13 @@ export const addProjectMember = async (req, res) => {
     project.members.push(member._id);
 
     await project.save();
+
+    await Notification.create({
+      recipient: member._id,
+      type: "PROJECT_MEMBER_ADDED",
+      message: `You have been added to the project "${project.name}"`,
+      project: project._id,
+    });
 
     const populatedProject = await project.populate([
       {

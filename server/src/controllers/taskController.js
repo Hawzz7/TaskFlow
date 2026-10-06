@@ -1,5 +1,6 @@
 import Task from "../models/Task.model.js";
 import Project from "../models/Project.model.js";
+import Notification from "../models/Notification.model.js";
 
 export const createTask = async (req, res) => {
   try {
@@ -198,8 +199,7 @@ export const updateTask = async (req, res) => {
 
     // Check whether the logged-in user belongs to the project
     const isMember = project.members.some(
-      (memberId) =>
-        memberId.toString() === req.user._id.toString(),
+      (memberId) => memberId.toString() === req.user._id.toString(),
     );
 
     if (!isMember) {
@@ -209,20 +209,13 @@ export const updateTask = async (req, res) => {
       });
     }
 
-    const {
-      title,
-      description,
-      status,
-      priority,
-      dueDate,
-      assignee,
-    } = req.body;
+    const { title, description, status, priority, dueDate, assignee } =
+      req.body;
 
     // If an assignee is provided, make sure they belong to the project
     if (assignee) {
       const isAssigneeMember = project.members.some(
-        (memberId) =>
-          memberId.toString() === assignee.toString(),
+        (memberId) => memberId.toString() === assignee.toString(),
       );
 
       if (!isAssigneeMember) {
@@ -246,6 +239,17 @@ export const updateTask = async (req, res) => {
     }
 
     await task.save();
+
+    if (
+      task.status === "COMPLETED" ||
+      !task.dueDate ||
+      new Date(task.dueDate) >= new Date()
+    ) {
+      await Notification.deleteMany({
+        task: task._id,
+        type: "TASK_OVERDUE",
+      });
+    }
 
     const populatedTask = await task.populate([
       {
@@ -300,8 +304,7 @@ export const deleteTask = async (req, res) => {
     }
 
     // Only the project owner can delete tasks
-    const isProjectOwner =
-      project.owner.toString() === req.user._id.toString();
+    const isProjectOwner = project.owner.toString() === req.user._id.toString();
 
     if (!isProjectOwner) {
       return res.status(403).json({
@@ -408,9 +411,7 @@ export const getDashboardTasks = async (req, res) => {
 
     // High-priority tasks that are not completed
     const highPriorityTasks = tasks.filter(
-      (task) =>
-        task.priority === "HIGH" &&
-        task.status !== "COMPLETED",
+      (task) => task.priority === "HIGH" && task.status !== "COMPLETED",
     );
 
     return res.status(200).json({
@@ -423,13 +424,11 @@ export const getDashboardTasks = async (req, res) => {
       statistics: {
         totalTasks: tasks.length,
 
-        pendingTasks: tasks.filter(
-          (task) => task.status !== "COMPLETED",
-        ).length,
+        pendingTasks: tasks.filter((task) => task.status !== "COMPLETED")
+          .length,
 
-        completedTasks: tasks.filter(
-          (task) => task.status === "COMPLETED",
-        ).length,
+        completedTasks: tasks.filter((task) => task.status === "COMPLETED")
+          .length,
 
         overdueTasks: overdueTasks.length,
 
@@ -482,4 +481,3 @@ export const getDashboardTasks = async (req, res) => {
 //     });
 //   }
 // };
-

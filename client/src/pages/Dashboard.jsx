@@ -12,6 +12,8 @@ import {
   X,
   ArrowRight,
   Plus,
+  Bell,
+  Check,
 } from "lucide-react";
 
 import { clearUser } from "../redux/slices/authSlice";
@@ -23,6 +25,12 @@ import {
   setProjectLoading,
   setProjectError,
 } from "../redux/slices/projectSlice";
+import {
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "../services/notificationServices";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -47,6 +55,11 @@ const Dashboard = () => {
     overdueTasks: 0,
     highPriorityTasks: 0,
   });
+
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const fetchProjects = async () => {
     dispatch(setProjectLoading(true));
@@ -122,11 +135,75 @@ const Dashboard = () => {
     }
   };
 
+  const fetchNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+
+      const [notificationData, unreadData] = await Promise.all([
+        getNotifications(),
+        getUnreadNotificationCount(),
+      ]);
+
+      setNotifications(notificationData.notifications || []);
+      setUnreadNotificationCount(unreadData.unreadCount || 0);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+
+      setNotifications([]);
+      setUnreadNotificationCount(0);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
     fetchProjectStatistics();
     fetchDashboardTasks();
+    fetchNotifications();
   }, []);
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      const data = await markNotificationAsRead(notification._id);
+
+      // Remove notification immediately from the UI
+      setNotifications((previousNotifications) =>
+        previousNotifications.filter((item) => item._id !== notification._id),
+      );
+
+      // Update unread count
+      if (!notification.isRead) {
+        setUnreadNotificationCount((count) => Math.max(0, count - 1));
+      }
+
+      // Redirect to the project containing the task
+      if (notification.type === "TASK_OVERDUE" && data.projectId) {
+        setNotificationOpen(false);
+
+        navigate(`/projects/${data.projectId}`);
+      }
+    } catch (error) {
+      console.error("Failed to handle notification:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+
+      setNotifications((previousNotifications) =>
+        previousNotifications.map((notification) => ({
+          ...notification,
+          isRead: true,
+        })),
+      );
+
+      setUnreadNotificationCount(0);
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -279,7 +356,122 @@ const Dashboard = () => {
               <Menu size={22} />
             </button>
 
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-4">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setNotificationOpen((previous) => !previous)}
+                  className="relative rounded-xl p-2.5 text-slate-600 transition hover:bg-slate-100"
+                  aria-label="Notifications"
+                >
+                  <Bell size={20} />
+
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {unreadNotificationCount > 9
+                        ? "9+"
+                        : unreadNotificationCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {notificationOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                    {/* Notification Header */}
+                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900">
+                          Notifications
+                        </h3>
+
+                        {unreadNotificationCount > 0 && (
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {unreadNotificationCount} unread
+                          </p>
+                        )}
+                      </div>
+
+                      {unreadNotificationCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Notification List */}
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notificationsLoading ? (
+                        <div className="px-4 py-8 text-center text-sm text-slate-500">
+                          Loading notifications...
+                        </div>
+                      ) : notifications.length === 0 ? (
+                        <div className="px-4 py-10 text-center">
+                          <Bell size={24} className="mx-auto text-slate-300" />
+
+                          <p className="mt-2 text-sm font-medium text-slate-700">
+                            No notifications
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            You're all caught up.
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <button
+                            key={notification._id}
+                            type="button"
+                            onClick={() =>
+                              handleNotificationClick(notification)
+                            }
+                            className={`flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 ${
+                              !notification.isRead ? "bg-indigo-50/40" : ""
+                            }`}
+                          >
+                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                              {notification.type === "TASK_OVERDUE" ? (
+                                <CheckSquare size={16} />
+                              ) : (
+                                <Users size={16} />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`text-sm ${
+                                  notification.isRead
+                                    ? "font-medium text-slate-600"
+                                    : "font-semibold text-slate-900"
+                                }`}
+                              >
+                                {notification.message}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-400">
+                                {new Date(
+                                  notification.createdAt,
+                                ).toLocaleString()}
+                              </p>
+                            </div>
+
+                            {!notification.isRead && (
+                              <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-600" />
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User Information */}
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold text-slate-900">
                   {user?.name}
@@ -288,6 +480,7 @@ const Dashboard = () => {
                 <p className="text-xs text-slate-500">{user?.role || "USER"}</p>
               </div>
 
+              {/* Avatar */}
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}
               </div>

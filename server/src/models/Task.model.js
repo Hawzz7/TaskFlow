@@ -32,6 +32,11 @@ const taskSchema = new mongoose.Schema(
       type: Date,
     },
 
+    overdueNotificationSent: {
+      type: Boolean,
+      default: false,
+    },
+
     project: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
